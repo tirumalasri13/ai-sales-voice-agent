@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Sales Voice Agent</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#6b7280;--line:#e5e7eb;--acc:#d97706;--ok:#059669;--bad:#dc2626;--blue:#2563eb}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1216;--card:#171b21;--ink:#e8eaee;--mut:#9aa3af;--line:#262c35;--acc:#f59e0b;--ok:#34d399;--bad:#f87171;--blue:#60a5fa}}
+  *{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:17px;margin:0;font-weight:650}header small{color:var(--mut)}
+  main{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;padding:16px 20px;max-width:1200px;margin:auto}
+  @media(max-width:860px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:0 0 10px;font-weight:600}
+  #chat{height:380px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:2px}
+  .b{max-width:85%;padding:8px 12px;border-radius:12px;white-space:pre-wrap}
+  .a{background:var(--bg);border:1px solid var(--line);align-self:flex-start}
+  .u{background:var(--blue);color:#fff;align-self:flex-end}
+  .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  button,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+  button{cursor:pointer}button.p{background:var(--acc);border-color:var(--acc);color:#111;font-weight:600}
+  button.rec{background:var(--bad);border-color:var(--bad);color:#fff}button:disabled{opacity:.5;cursor:default}
+  input{flex:1;min-width:140px}
+  .kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:14px}.kv div:nth-child(odd){color:var(--mut)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--line)}
+  .hot{color:var(--bad)}.warm{color:var(--acc)}.cold{color:var(--blue)}
+  .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 2px}.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .4s}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:600}
+  .tabs{display:flex;gap:6px;margin-bottom:10px}.tabs button.on{border-color:var(--acc);color:var(--acc)}
+  .why{font-size:12px;color:var(--mut);margin-top:6px}pre{white-space:pre-wrap;font-size:13px;margin:0}
+  .full{grid-column:1/-1}
+</style>
+</head>
+<body>
+<header>
+  <h1>AI Sales Voice Agent</h1><small>STT · RAG · lead scoring · booking · CRM</small>
+  <span style="flex:1"></span>
+  <label>Language <select id="lang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="te">తెలుగు</option></select></label>
+</header>
+<main>
+  <section class="card">
+    <h2>Live call</h2>
+    <div id="chat"></div>
+    <div class="row">
+      <button id="start" class="p">Start call</button>
+      <button id="mic" disabled>🎤 Hold to talk</button>
+      <button id="end" disabled>End call</button>
+    </div>
+    <div class="row"><input id="txt" placeholder="…or type a message (fallback if mic unsupported)" disabled><button id="send" disabled>Send</button></div>
+    <div class="why" id="status">Voice uses your browser's speech APIs (Chrome/Edge recommended).</div>
+  </section>
+
+  <section class="card">
+    <h2>Live analysis</h2>
+    <div class="kv">
+      <div>Lead score</div><div><span id="tier" class="pill">–</span> <b id="score">0</b>/100<div class="bar"><i id="barfill"></i></div></div>
+      <div>Sentiment</div><div id="sent">–</div>
+      <div>Intent</div><div id="intent">–</div>
+      <div>Language</div><div id="clang">–</div>
+      <div>Name / phone</div><div id="who">–</div>
+      <div>City / bill</div><div id="biz">–</div>
+      <div>Booking</div><div id="book">–</div>
+      <div>RAG sources</div><div id="src">–</div>
+      <div>Latency</div><div id="lat">–</div>
+    </div>
+    <div class="why" id="why"></div>
+  </section>
+
+  <section class="card full">
+    <div class="tabs">
+      <button data-t="summary" class="on">Call summary</button><button data-t="leads">CRM leads</button>
+      <button data-t="bookings">Appointments</button><button data-t="insights">Business insights</button>
+    </div>
+    <div id="panel"><pre>End a call to see the AI summary.</pre></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let call=null,tab="summary",lastSummary="End a call to see the AI summary.";
+const LOCALE={en:"en-IN",hi:"hi-IN",te:"te-IN"};
+const post=(u,b)=>fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b||{})}).then(r=>r.json());
+function bubble(t,c){const d=document.createElement("div");d.className="b "+c;d.textContent=t;$("chat").append(d);$("chat").scrollTop=1e9}
+function speak(t,lang){return new Promise(res=>{if(!window.speechSynthesis)return res();speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(t);u.lang=LOCALE[lang]||"en-IN";u.onend=u.onerror=res;speechSynthesis.speak(u)})}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+function setup(){ if(!SR){$("mic").style.display="none";$("status").textContent="Speech recognition not supported here - use the text box.";return}
+  rec=new SR();rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onresult=e=>sendText(e.results[0][0].transcript);
+  rec.onend=()=>{$("mic").classList.remove("rec");$("mic").textContent="🎤 Hold to talk"};
+  rec.onerror=e=>{$("status").textContent="Mic error: "+e.error}}
+setup();
+function startRec(){if(!rec||!call)return;speechSynthesis.cancel();rec.lang=LOCALE[$("lang").value];try{rec.start()}catch(e){};$("mic").classList.add("rec");$("mic").textContent="Listening…"}
+$("mic").onmousedown=startRec;$("mic").onmouseup=()=>rec&&rec.stop();$("mic").ontouchstart=e=>{e.preventDefault();startRec()};$("mic").ontouchend=()=>rec&&rec.stop();
+function enable(on){["mic","end","txt","send"].forEach(i=>$(i).disabled=!on);$("start").disabled=on;$("lang").disabled=on}
+$("start").onclick=async()=>{$("chat").innerHTML="";const r=await post("/api/call/start",{lang:$("lang").value});call=r.call_id;enable(true);bubble(r.reply,"a");speak(r.reply,r.lang)};
+async function sendText(t){if(!call||!t.trim())return;bubble(t,"u");$("txt").value="";
+  const r=await post("/api/call/turn",{call_id:call,text:t});if(r.error){bubble(r.error,"a");return}
+  bubble(r.reply,"a");speak(r.reply,r.lang);render(r);if(r.end_call)setTimeout(endCall,1500)}
+$("send").onclick=()=>sendText($("txt").value);$("txt").onkeydown=e=>{if(e.key==="Enter")sendText($("txt").value)};
+function render(r){const l=r.lead;$("score").textContent=l.score;$("barfill").style.width=l.score+"%";
+  $("tier").textContent=l.tier.toUpperCase();$("tier").className="pill "+l.tier;
+  $("sent").textContent=`${r.sentiment.label} (${r.sentiment.score})`;$("intent").textContent=r.intent;$("clang").textContent=r.lang;
+  const s=r.slots;$("who").textContent=`${s.name||"–"} / ${s.phone||"–"}`;$("biz").textContent=`${s.city||"–"} / ${s.monthly_bill?"Rs "+s.monthly_bill:"–"}`;
+  $("book").textContent=r.booking?r.booking.replace("T"," "):"–";$("src").textContent=r.sources.map(x=>x.title+" ("+x.score+")").join(", ")||"–";
+  $("lat").textContent=r.latency_ms+" ms (backend)";$("why").textContent=l.reasons.join("  ·  ")}
+async function endCall(){if(!call)return;const r=await post("/api/call/end",{call_id:call});call=null;enable(false);speechSynthesis.cancel();
+  lastSummary=r.summary;tab="summary";show()}
+$("end").onclick=endCall;
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;show()});
+const tbl=(rows,cols)=>rows.length?"<table><tr>"+cols.map(c=>"<th>"+c+"</th>").join("")+"</tr>"+rows.map(r=>"<tr>"+cols.map(c=>"<td>"+(r[c]??"")+"</td>").join("")+"</tr>").join("")+"</table>":"<pre>No data yet.</pre>";
+async function show(){document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));const p=$("panel");
+  if(tab==="summary")p.innerHTML="<pre></pre>",p.firstChild.textContent=lastSummary;
+  if(tab==="leads")p.innerHTML=tbl(await (await fetch("/api/leads")).json(),["name","phone","city","monthly_bill","tier","score","language"]);
+  if(tab==="bookings")p.innerHTML=tbl(await (await fetch("/api/bookings")).json(),["slot","name","phone","city","tier","status"]);
+  if(tab==="insights"){const i=await (await fetch("/api/insights")).json();p.innerHTML="<pre></pre>";p.firstChild.textContent=JSON.stringify(i,null,2)}}
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="13">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker></defs>
+  <rect width="900" height="560" fill="#ffffff"/>
+  <text x="450" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#0f172a">AI Sales Voice Agent - System Architecture</text>
+
+  <!-- channel -->
+  <rect x="20" y="60" width="150" height="120" rx="10" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="95" y="82" text-anchor="middle" font-weight="700" fill="#1d4ed8">CALLER</text>
+  <text x="95" y="104" text-anchor="middle">Phone (PSTN/SIP)</text><text x="95" y="124" text-anchor="middle">Web / mobile app</text>
+  <text x="95" y="144" text-anchor="middle">WhatsApp voice</text><text x="95" y="164" text-anchor="middle" fill="#64748b">[PROTO: browser mic]</text>
+
+  <!-- gateway -->
+  <rect x="215" y="60" width="150" height="120" rx="10" fill="#f1f5f9" stroke="#475569"/>
+  <text x="290" y="82" text-anchor="middle" font-weight="700">VOICE GATEWAY</text>
+  <text x="290" y="104" text-anchor="middle">Twilio / Exotel / LiveKit</text><text x="290" y="124" text-anchor="middle">WebRTC / WebSocket</text>
+  <text x="290" y="144" text-anchor="middle">VAD + barge-in</text><text x="290" y="164" text-anchor="middle" fill="#64748b">[PROTO: Web Speech]</text>
+
+  <!-- STT/TTS -->
+  <rect x="410" y="60" width="130" height="52" rx="10" fill="#fef3c7" stroke="#d97706"/>
+  <text x="475" y="82" text-anchor="middle" font-weight="700">STT</text><text x="475" y="100" text-anchor="middle">Deepgram / Whisper</text>
+  <rect x="410" y="128" width="130" height="52" rx="10" fill="#fef3c7" stroke="#d97706"/>
+  <text x="475" y="150" text-anchor="middle" font-weight="700">TTS</text><text x="475" y="168" text-anchor="middle">Azure / ElevenLabs</text>
+
+  <!-- API -->
+  <rect x="585" y="60" width="295" height="120" rx="10" fill="#dcfce7" stroke="#059669"/>
+  <text x="732" y="82" text-anchor="middle" font-weight="700" fill="#047857">DIALOGUE SERVICE (stateless API pods)</text>
+  <text x="732" y="106" text-anchor="middle">NLU: language - sentiment - intent - entities</text>
+  <text x="732" y="126" text-anchor="middle">POLICY (deterministic): qualify - answer - book</text>
+  <text x="732" y="146" text-anchor="middle">GENERATOR: LLM (grounded) or templates</text>
+  <text x="732" y="166" text-anchor="middle" fill="#64748b">[PROTO: Starlette app.py + agent.py]</text>
+
+  <!-- arrows top row -->
+  <line x1="170" y1="120" x2="213" y2="120" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="365" y1="86" x2="408" y2="86" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="365" y1="154" x2="408" y2="154" stroke="#475569" marker-start="url(#a)"/>
+  <line x1="540" y1="86" x2="583" y2="110" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="583" y1="140" x2="540" y2="154" stroke="#475569" marker-end="url(#a)"/>
+
+  <!-- data layer -->
+  <rect x="20" y="260" width="200" height="110" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="120" y="282" text-anchor="middle" font-weight="700" fill="#6d28d9">RAG</text>
+  <text x="120" y="304" text-anchor="middle">Chunk - embed - retrieve</text><text x="120" y="324" text-anchor="middle">pgvector / Qdrant + reranker</text>
+  <text x="120" y="354" text-anchor="middle" fill="#64748b">[PROTO: TF-IDF, rag.py]</text>
+
+  <rect x="245" y="260" width="200" height="110" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="345" y="282" text-anchor="middle" font-weight="700" fill="#6d28d9">SESSION MEMORY</text>
+  <text x="345" y="304" text-anchor="middle">Short-term: Redis (TTL)</text><text x="345" y="324" text-anchor="middle">Long-term: lead history in DB</text>
+  <text x="345" y="354" text-anchor="middle" fill="#64748b">[PROTO: in-process dict]</text>
+
+  <rect x="470" y="260" width="200" height="110" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="570" y="282" text-anchor="middle" font-weight="700" fill="#6d28d9">CRM + CALENDAR</text>
+  <text x="570" y="304" text-anchor="middle">Postgres (leads, bookings)</text><text x="570" y="324" text-anchor="middle">HubSpot / Zoho / Google Cal</text>
+  <text x="570" y="354" text-anchor="middle" fill="#64748b">[PROTO: SQLite, crm.py]</text>
+
+  <rect x="695" y="260" width="185" height="110" rx="10" fill="#f5f3ff" stroke="#7c3aed"/>
+  <text x="787" y="282" text-anchor="middle" font-weight="700" fill="#6d28d9">LLM PROVIDER</text>
+  <text x="787" y="304" text-anchor="middle">Claude / other, via API</text><text x="787" y="324" text-anchor="middle">Prompt cache + fallback</text>
+  <text x="787" y="354" text-anchor="middle" fill="#64748b">[PROTO: optional env key]</text>
+
+  <line x1="680" y1="182" x2="120" y2="258" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="700" y1="182" x2="345" y2="258" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="740" y1="182" x2="570" y2="258" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="800" y1="182" x2="787" y2="258" stroke="#475569" marker-end="url(#a)"/>
+
+  <!-- async -->
+  <rect x="20" y="420" width="430" height="110" rx="10" fill="#fff7ed" stroke="#ea580c"/>
+  <text x="235" y="442" text-anchor="middle" font-weight="700" fill="#c2410c">POST-CALL PIPELINE (async: Kafka / SQS workers)</text>
+  <text x="235" y="466" text-anchor="middle">Transcript store (S3) - summarisation - lead score finalise</text>
+  <text x="235" y="486" text-anchor="middle">CRM sync - WhatsApp/SMS confirmation - reminders</text>
+  <text x="235" y="510" text-anchor="middle" fill="#64748b">[PROTO: agent.end_call()]</text>
+
+  <rect x="470" y="420" width="410" height="110" rx="10" fill="#fff7ed" stroke="#ea580c"/>
+  <text x="675" y="442" text-anchor="middle" font-weight="700" fill="#c2410c">ANALYTICS + OBSERVABILITY</text>
+  <text x="675" y="466" text-anchor="middle">Dashboard: conversion, sentiment, objections, languages</text>
+  <text x="675" y="486" text-anchor="middle">Latency p95, STT WER, cost/call, LLM eval traces</text>
+  <text x="675" y="510" text-anchor="middle" fill="#64748b">[PROTO: /api/insights + UI tabs]</text>
+
+  <line x1="570" y1="372" x2="400" y2="418" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="345" y1="372" x2="300" y2="418" stroke="#475569" marker-end="url(#a)"/>
+  <line x1="450" y1="474" x2="468" y2="474" stroke="#475569" marker-end="url(#a)"/>
+</svg>
